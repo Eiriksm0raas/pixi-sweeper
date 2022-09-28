@@ -1,0 +1,24 @@
+{
+  "name": "pixi-sweeper",
+  "version": "1.0.0",
+  "description": "Minesweeper with pixi.js",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "pixi-sweeper"
+  },
+  "keywords": [
+    "Minesweeper",
+    "JavaScript",
+    "Game",
+    "Pixi.js"
+  ],
+  "author": "Eirik Smørås",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "pixi.js": "^6.5.4"
+  }
+}
