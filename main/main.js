@@ -4,6 +4,9 @@ const SPRITE_TEXTURE = '';
 const SQUARE_WIDTH  = 20;
 const SQUARE_HEIGHT = 20;
 
+// Mac chrome
+// open /Applications/Google\ Chrome.app/ --args --allow-file-access-from-files
+
 let displayRules = {
     squareWidth:    SQUARE_WIDTH,
     squareHeight:   SQUARE_HEIGHT,
@@ -91,17 +94,21 @@ function populateMineField(mineField, bombs, x, y) {
     
     for(let count = 0;count < bombs;count++) {
         const randY = Math.floor(Math.random() * yIndex);
-        let iy = randY;
-        for(;xIndex[iy] <= 0;iy++) {}
+        let bombY = 0;
+        for(let iy = 0;iy < randY;bombY++) {
+            if(xIndex[bombY] > 0) iy++;
+        }
 
-        const randX = Math.floor(Math.random() * xIndex[iy]);
-        let ix = randX;
-        for(;mineField[iy][ix].isOcupied();ix++) {}
+        const randX = Math.floor(Math.random() * xIndex[bombY]);
+        let bombX = 0;
+        for(let ix = 0;ix < randX;bombX++) {
+            if(!mineField[bombY][bombX].isOcupied()) ix++;
+        }
 
-        mineField[iy][ix].bomb = true;
+        mineField[bombY][bombX].bomb = true;
 
-        xIndex[iy]--;
-        if(xIndex[iy] <= 0) yIndex--;
+        xIndex[bombY]--;
+        if(xIndex[bombY] <= 0) yIndex--;
     }
 }
 
