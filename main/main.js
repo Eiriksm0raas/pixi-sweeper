@@ -22,6 +22,10 @@ let gameState = {
         x: 0,
         y: 0,
     },
+    triedToFlag: {
+        x: 0,
+        y: 0,
+    },
 };
 
 const app = new PIXI.Application({
@@ -30,6 +34,9 @@ const app = new PIXI.Application({
     backgroundColor: 0x02395D,
 });
 document.body.appendChild(app.view);
+document.oncontextmenu = document.body.oncontextmenu = e => {
+    e.preventDefault();
+}
 
 const spriteLoader = PIXI.Loader.shared;
 
@@ -74,8 +81,8 @@ function open(x, y, mineField, textures) {
         numerizeMineField(mineField);
         open(x, y, mineField, textures);
     } else {
-        setTileTexture(x, y, mineField, textures);
         mineField[y][x].open = true;
+        setTileTexture(x, y, mineField, textures);
         if(mineField[y][x].number == 0) {
             openAroundZeros(x, y, mineField, textures);
         }
@@ -86,14 +93,25 @@ function clickedOnTile(x, y, mineField, textures) {
     gameState.triedToOpen.x = x;
     gameState.triedToOpen.y = y;
 
-    if(!mineField[y][x].open) mineField[y][x].setTexture(textures.openTile[0]);
+    if(!mineField[y][x].open && !mineField[y][x].flag) {
+        mineField[y][x].setTexture(textures.openTile[0]);
+    }
 }
 
 function tryToOpen(x, y, mineField, textures) {
-    if(gameState.triedToOpen.x == x && gameState.triedToOpen.y == y) {
+    if(mineField[y][x].flag) {
+        return;
+    } else if(gameState.triedToOpen.x == x && gameState.triedToOpen.y == y) {
         open(x, y, mineField, textures);
     } else if(!mineField[y][x].open) {
         mineField[gameState.triedToOpen.y][gameState.triedToOpen.x].setTexture(textures.closedTile);
+    }
+}
+
+function tryToFlag(x, y, mineField, textures) {
+    if(gameState.triedToFlag.x === x && gameState.triedToFlag.y === y) {
+        mineField[y][x].flag = !mineField[y][x].flag;
+        setTileTexture(x, y, mineField, textures);
     }
 }
 
@@ -111,12 +129,21 @@ function fakeMineField(mineField, textures) {
             sprite.interactive  = true;
             sprite.buttonMode   = true;
 
-            sprite.on('pointerdown', e => {
+            sprite.on('mousedown', () => {
                 clickedOnTile(x, y, mineField, textures);
             });
 
-            sprite.on('pointerup', e => {
+            sprite.on('mouseup', () => {
                 tryToOpen(x, y, mineField, textures);
+            });
+
+            sprite.on('rightdown', () => {
+                gameState.triedToFlag.x = x;
+                gameState.triedToFlag.y = y;
+            });
+
+            sprite.on('rightup', () => {
+                tryToFlag(x, y, mineField, textures);
             });
 
             app.stage.addChild(sprite);
@@ -126,7 +153,11 @@ function fakeMineField(mineField, textures) {
 }
 
 function setTileTexture(x, y, mineField, textures) {
-    if(mineField[y][x].bomb) {
+    if(mineField[y][x].flag) {
+        mineField[y][x].setTexture(textures.flag);
+    } else if(!mineField[y][x].open) {
+        mineField[y][x].setTexture(textures.closedTile);
+    } else if(mineField[y][x].bomb) {
         mineField[y][x].setTexture(textures.openBomb[1]);
     } else {
         mineField[y][x].setTexture(textures.openTile[mineField[y][x].number]);
