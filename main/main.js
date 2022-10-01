@@ -1,8 +1,8 @@
 const BORDER = 10;
 const SPRITE_TEXTURE = '';
 
-const SQUARE_WIDTH  = 20;
-const SQUARE_HEIGHT = 20;
+const SQUARE_WIDTH  = 40;
+const SQUARE_HEIGHT = 40;
 
 // Mac chrome
 // open /Applications/Google\ Chrome.app/ --args --allow-file-access-from-files
@@ -10,6 +10,18 @@ const SQUARE_HEIGHT = 20;
 let displayRules = {
     squareWidth:    SQUARE_WIDTH,
     squareHeight:   SQUARE_HEIGHT,
+};
+
+let gameRules = {
+    bombCount: 99,
+}
+
+let gameState = {
+    firstOpened: false,
+    triedToOpen: {
+        x: 0,
+        y: 0,
+    },
 };
 
 const app = new PIXI.Application({
@@ -35,39 +47,89 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
     textures.closedTile = PIXI.Texture.from('closedTile');
     textures.flag       = PIXI.Texture.from('flag');
 
-    const mineField = generateEmptyMineField(60, 30);
+    const mineField = generateEmptyMineField(30, 16);
+    fakeMineField(mineField, textures);
+    /*
     populateMineField(mineField, 500, 15, 8);
     numerizeMineField(mineField);
     displayMineField(mineField, textures);
+    */
 
 });
 
-function displayMineField(mineField, textures) {
+function openAroundZeros(x, y, mineField, textures) {
+    for(let iy = y - 1;iy <= y + 1;iy++) {
+        for(let ix = x - 1;ix <= x + 1;ix++) {
+            if(testForInbounds(mineField, ix, iy) && !mineField[iy][ix].open) {
+                open(ix, iy, mineField, textures);
+            }
+        }
+    }
+}
+
+function open(x, y, mineField, textures) {
+    if(!gameState.firstOpened) {
+        gameState.firstOpened = true;
+        populateMineField(mineField, gameRules.bombCount, x, y);
+        numerizeMineField(mineField);
+        open(x, y, mineField, textures);
+    } else {
+        setTileTexture(x, y, mineField, textures);
+        mineField[y][x].open = true;
+        if(mineField[y][x].number == 0) {
+            openAroundZeros(x, y, mineField, textures);
+        }
+    }
+}
+
+function clickedOnTile(x, y, mineField, textures) {
+    gameState.triedToOpen.x = x;
+    gameState.triedToOpen.y = y;
+
+    if(!mineField[y][x].open) mineField[y][x].setTexture(textures.openTile[0]);
+}
+
+function tryToOpen(x, y, mineField, textures) {
+    if(gameState.triedToOpen.x == x && gameState.triedToOpen.y == y) {
+        open(x, y, mineField, textures);
+    } else if(!mineField[y][x].open) {
+        mineField[gameState.triedToOpen.y][gameState.triedToOpen.x].setTexture(textures.closedTile);
+    }
+}
+
+function fakeMineField(mineField, textures) {
     for(let y = 0;y < mineField.length;y++) {
         for(let x = 0;x < mineField[0].length;x++) {
-            let sprite;
-
-            if(mineField[y][x].flag) {
-                sprite = new PIXI.Sprite(textures.flag);
-            } else if(!mineField[y][x].open) {
-                sprite = new PIXI.Sprite(textures.closedTile);
-            } else if(mineField[y][x].bomb) {
-                sprite = new PIXI.Sprite(textures.openBomb[0]);
-            } else {
-                sprite = new PIXI.Sprite(textures.openTile[mineField[y][x].number]);
-            }
-
+            const sprite = new PIXI.Sprite(textures.closedTile);
             const square = mineField[y][x];
-            //mineField[y][x].setSprite(sprite);
-            square.setSprite(sprite);
-            
+
             sprite.x = square.x * displayRules.squareWidth;
             sprite.y = square.y * displayRules.squareHeight;
             sprite.width    = displayRules.squareWidth;
             sprite.height   = displayRules.squareHeight; 
 
+            sprite.interactive  = true;
+            sprite.buttonMode   = true;
+
+            sprite.on('pointerdown', e => {
+                clickedOnTile(x, y, mineField, textures);
+            });
+
+            sprite.on('pointerup', e => {
+                tryToOpen(x, y, mineField, textures);
+            });
+
             app.stage.addChild(sprite);
+            square.setSprite(sprite);
         }
+    }  
+}
+
+function setTileTexture(x, y, mineField, textures) {
+    if(mineField[y][x].bomb) {
+        mineField[y][x].setTexture(textures.openBomb[1]);
+    } else {
+        mineField[y][x].setTexture(textures.openTile[mineField[y][x].number]);
     }
 }
 
@@ -91,7 +153,6 @@ function populateMineField(mineField, bombs, x, y) {
         if(xIndex[iy] > 0) yIndex++;
     }
 
-    
     for(let count = 0;count < bombs;count++) {
         const randY = Math.floor(Math.random() * yIndex);
         let bombY = 0;
@@ -138,7 +199,7 @@ function numerizeMineField(mineField) {
 }
 
 function testForInbounds(mineField, x, y) {
-    return !(x < 0 || y < 0 || x >= mineField[0].length || y >= mineField.lenght);
+    return !(x < 0 || y < 0 || x >= mineField[0].length || y >= mineField.length);
 }
 
 function generateEmptyMineField(width, height) {
@@ -158,7 +219,7 @@ class Square {
         this.x = x;
         this.y = y;
 
-        this.open           = true;
+        this.open           = false;
         this.bomb           = bomb;
         this.number         = number;
         this.flag           = flag;
@@ -177,6 +238,10 @@ class Square {
 
     setSprite(sprite) {
         this._sprite = sprite;
+    }
+
+    setTexture(texture) {
+        this._sprite.texture = texture;
     }
 }
 
