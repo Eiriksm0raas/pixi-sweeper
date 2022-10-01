@@ -79,6 +79,9 @@ function open(x, y, mineField, textures) {
         gameState.firstOpened = true;
         populateMineField(mineField, gameRules.bombCount, x, y);
         numerizeMineField(mineField);
+
+        testFail(mineField);
+
         open(x, y, mineField, textures);
     } else {
         mineField[y][x].open = true;
@@ -87,6 +90,27 @@ function open(x, y, mineField, textures) {
             openAroundZeros(x, y, mineField, textures);
         }
     }
+}
+
+function testFail(mineField) {
+    let count = 0;
+    for(let y = 0;y < mineField.length;y++) {
+        for(let x = 0;x < mineField[0].length;x++) {
+            const square = mineField[y][x];
+
+            if(square.bomb) count++;
+            /*
+            if(square.pickedFirst && !square.isOcupied()) {
+                console.log(square.x, square.y, 'fuck me');
+            }
+
+            if(square.bomb && square.pickedFirst) {
+                console.log(square.x, square.y);
+                if(!square.isOcupied()) console.log('???');
+            }   */
+        }
+    }
+    console.log('bombs: ', count);
 }
 
 function clickedOnTile(x, y, mineField, textures) {
@@ -103,13 +127,13 @@ function tryToOpen(x, y, mineField, textures) {
         return;
     } else if(gameState.triedToOpen.x == x && gameState.triedToOpen.y == y) {
         open(x, y, mineField, textures);
-    } else if(!mineField[y][x].open) {
-        mineField[gameState.triedToOpen.y][gameState.triedToOpen.x].setTexture(textures.closedTile);
+    } else {
+        setTileTexture(gameState.triedToOpen.x, gameState.triedToOpen.y, mineField, textures);
     }
 }
 
 function tryToFlag(x, y, mineField, textures) {
-    if(gameState.triedToFlag.x === x && gameState.triedToFlag.y === y) {
+    if(gameState.triedToFlag.x === x && gameState.triedToFlag.y === y && !mineField[y][x].open) {
         mineField[y][x].flag = !mineField[y][x].flag;
         setTileTexture(x, y, mineField, textures);
     }
@@ -192,13 +216,23 @@ function populateMineField(mineField, bombs, x, y) {
         }
 
         const randX = Math.floor(Math.random() * xIndex[bombY]);
+        
         let bombX = 0;
         for(let ix = 0;ix < randX;bombX++) {
-            if(!mineField[bombY][bombX].isOcupied()) ix++;
+            //if(!mineField[bombY][bombX].isOcupied()) ix++;
+            console.log(bombY, bombX);
+            if(!mineField[bombY][bombX].bomb && !mineField[bombY][bombX].pickedFirst) {
+                ix++;
+            } else {
+                
+            }
+        }
+
+        if(mineField[bombY][bombX].bomb) {
+            console.log(bombY, bombX, 'g');
         }
 
         mineField[bombY][bombX].bomb = true;
-
         xIndex[bombY]--;
         if(xIndex[bombY] <= 0) yIndex--;
     }
@@ -260,6 +294,7 @@ class Square {
     }
 
     isOcupied() {
+        console.log('fucker');
         return this.bomb || this.pickedFirst;
     }
 
