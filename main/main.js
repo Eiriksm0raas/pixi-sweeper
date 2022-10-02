@@ -14,6 +14,8 @@ let displayRules = {
 
 let gameRules = {
     bombCount: 99,
+    width: 30,
+    height: 16,
 }
 
 let gameState = {
@@ -28,7 +30,8 @@ let gameState = {
     },
     smiley: {
         sprite: null,
-    }
+    },
+    opened: 0,
 };
 
 const app = new PIXI.Application({
@@ -73,11 +76,19 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
 
     gameState.smiley.sprite = new PIXI.Sprite(textures.smile[0]);
     app.stage.addChild(gameState.smiley.sprite);
+
     gameState.smiley.sprite.width   = 100;
     gameState.smiley.sprite.height  = 100;
     gameState.smiley.sprite.x = (window.innerWidth / 2) - 50;
 
-    const mineField = generateEmptyMineField(30, 16);
+    gameState.smiley.sprite.interactive = true;
+    gameState.smiley.sprite.buttonMode = true;
+
+    gameState.smiley.sprite.on('mousedown', () => {
+        location.reload();
+    });
+
+    const mineField = generateEmptyMineField(gameRules.width, gameRules.height);
     fakeMineField(mineField, textures);
     centerContainer();
 });
@@ -105,10 +116,33 @@ function open(x, y, mineField, textures) {
         setTileTexture(x, y, mineField, textures);
         if(mineField[y][x].bomb) {
             lose(mineField, textures);
-        } else if(mineField[y][x].number == 0) {
-            openAroundZeros(x, y, mineField, textures);
+        } else {
+
+            gameState.opened++;
+            if(gameState.opened + gameRules.bombCount === gameRules.width * gameRules.height) {
+                win(mineField, textures);
+            }
+
+            if(mineField[y][x].number == 0) {
+                openAroundZeros(x, y, mineField, textures);
+            }
         }
     }
+}
+
+function win(mineField, textures) {
+    console.log('yeee');
+    for(let y = 0;y < mineField.length;y++) {
+        for(let x = 0;x < mineField[0].length;x++) {
+            if(mineField[y][x].bomb) {
+                mineField[y][x].flag = true;
+                setTileTexture(x, y, mineField, textures);
+            }
+        }
+    }
+    gameState.smiley.sprite.texture = textures.smile[2];
+    // 4Head
+    textures.smile[0] = textures.smile[1] = textures.smile[2];
 }
 
 function testFail(mineField) {
