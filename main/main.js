@@ -1,3 +1,4 @@
+
 const BORDER = 10;
 const SPRITE_TEXTURE = '';
 
@@ -32,6 +33,14 @@ let gameState = {
         sprite: null,
     },
     opened: 0,
+    flagged: 0,
+    time: {
+        started: false,
+        time: null,
+    },
+    score: {
+        digits: [],
+    }
 };
 
 const app = new PIXI.Application({
@@ -74,12 +83,14 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
     textures.closedTile = PIXI.Texture.from('closedTile');
     textures.flag       = PIXI.Texture.from('flag');
 
+    const topGroup = new PIXI.Container();
+
+    // Smiley
     gameState.smiley.sprite = new PIXI.Sprite(textures.smile[0]);
-    app.stage.addChild(gameState.smiley.sprite);
+    topGroup.addChild(gameState.smiley.sprite);
 
     gameState.smiley.sprite.width   = 100;
     gameState.smiley.sprite.height  = 100;
-    gameState.smiley.sprite.x = (window.innerWidth / 2) - 50;
 
     gameState.smiley.sprite.interactive = true;
     gameState.smiley.sprite.buttonMode = true;
@@ -88,10 +99,35 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
         location.reload();
     });
 
+    // Score
+    gameState.score.digits = setupDigits(textures);
+    gameState.score.container = new PIXI.Container();
+    gameState.score.container.addChild(...gameState.score.digits);
+    updateScore(textures);
+    topGroup.addChild(gameState.score.container);
+
+    // Top group positions
+    gameState.smiley.sprite.x = gameState.score.container.width;
+    app.stage.addChild(topGroup);
+
     const mineField = generateEmptyMineField(gameRules.width, gameRules.height);
     fakeMineField(mineField, textures);
     centerContainer();
 });
+
+function setupDigits(textures) {
+    const digits = [];
+    for(let i = 0;i < 3;i++) {
+        const sprite = new PIXI.Sprite(textures.score[0]);
+
+        sprite.width =  50;
+        sprite.height = 100;
+
+        sprite.x = i * 50;
+        digits.push(sprite);
+    }
+    return digits;
+}
 
 function openAroundZeros(x, y, mineField, textures) {
     for(let iy = y - 1;iy <= y + 1;iy++) {
@@ -131,12 +167,12 @@ function open(x, y, mineField, textures) {
 }
 
 function win(mineField, textures) {
-    console.log('yeee');
     for(let y = 0;y < mineField.length;y++) {
         for(let x = 0;x < mineField[0].length;x++) {
             if(mineField[y][x].bomb) {
                 mineField[y][x].flag = true;
                 setTileTexture(x, y, mineField, textures);
+                addToScore(textures);
             }
         }
     }
@@ -179,6 +215,30 @@ function lose(mineField, textures) {
     }
 }
 
+function getDisplayNumber(number) {
+    if(number > 999) {
+        return '999';
+    } else if(number > 99) {
+        return number.toString();
+    } else if(number > 9) {
+        return '0' + number;
+    } else {
+        return '00' + number;
+    }
+}
+
+function updateScore(textures) {
+    const display = getDisplayNumber(gameRules.bombCount - gameState.flagged);
+    gameState.score.digits[0].texture = textures.score[parseInt(display[0])];
+    gameState.score.digits[1].texture = textures.score[parseInt(display[1])];
+    gameState.score.digits[2].texture = textures.score[parseInt(display[2])];
+}
+
+function addToScore(textures, positive = true) {
+    gameState.flagged += positive? 1 : -1;
+    updateScore(textures); 
+}
+
 function clickedOnTile(x, y, mineField, textures) {
     gameState.triedToOpen.x = x;
     gameState.triedToOpen.y = y;
@@ -204,6 +264,7 @@ function tryToFlag(x, y, mineField, textures) {
     if(gameState.triedToFlag.x === x && gameState.triedToFlag.y === y && !mineField[y][x].open) {
         mineField[y][x].flag = !mineField[y][x].flag;
         setTileTexture(x, y, mineField, textures);
+        addToScore(textures, mineField[y][x].flag);
     }
 }
 
@@ -357,10 +418,6 @@ function populateMineField(mineField, bombs, x, y) {
             } else {
                 
             }
-        }
-
-        if(mineField[bombY][bombX].bomb) {
-            console.log(bombY, bombX, 'g');
         }
 
         mineField[bombY][bombX].bomb = true;
