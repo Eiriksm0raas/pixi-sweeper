@@ -1,8 +1,8 @@
 const BORDER = 10;
 const SPRITE_TEXTURE = '';
 
-const SQUARE_WIDTH  = 40;
-const SQUARE_HEIGHT = 40;
+const SQUARE_WIDTH  = 50;
+const SQUARE_HEIGHT = 50;
 
 // Mac chrome
 // open /Applications/Google\ Chrome.app/ --args --allow-file-access-from-files
@@ -77,11 +77,10 @@ function openAroundZeros(x, y, mineField, textures) {
 function open(x, y, mineField, textures) {
     if(!gameState.firstOpened) {
         gameState.firstOpened = true;
-        populateMineField(mineField, gameRules.bombCount, x, y);
+        //populateMineField(mineField, gameRules.bombCount, x, y);
+        //populate2(x, y, gameRules.bombCount, mineField);
+        populateBrute(x, y, gameRules.bombCount, mineField);
         numerizeMineField(mineField);
-
-        testFail(mineField);
-
         open(x, y, mineField, textures);
     } else {
         mineField[y][x].open = true;
@@ -185,6 +184,69 @@ function setTileTexture(x, y, mineField, textures) {
         mineField[y][x].setTexture(textures.openBomb[1]);
     } else {
         mineField[y][x].setTexture(textures.openTile[mineField[y][x].number]);
+    }
+}
+
+function populate2(x, y, bombs, mineField) {
+    // Setting up the indexes
+    let yIndex      = mineField.length;
+    const xIndex    = [];
+    for(let iy = 0;iy < mineField.length;iy++) {
+        xIndex[iy] = mineField[0].length;
+
+        if(iy >= y - 1 && iy <= y + 1) {
+            for(let ix = x - 1;ix < x + 1;ix++) {
+                if(testForInbounds(mineField, ix, iy)) {
+                    xIndex[iy]--;
+                    mineField[iy][ix].pickedFirst = true;
+                }
+            }
+        }
+        if(xIndex[iy] <= 0) yIndex--;
+    }
+
+    // Put in the bombs
+    for(let placed = 0;placed < bombs;placed++) {
+        const randomY = Math.floor(Math.random() * yIndex);
+        let realY = 0;
+        for(let iy = 0;iy < randomY;) {
+            if(xIndex[realY] > 0) iy++;
+            realY++;
+        }
+
+        const randomX = Math.floor(Math.random() * xIndex[realY]);
+        let realX = 0;
+        for(let ix = 0;ix < randomX;) {
+            if(!mineField[realY][realX].isOcupied()) ix++;
+            realX++;
+        }
+
+        mineField[realY][realX].bomb = true;
+        xIndex[realY]--;
+        if(xIndex[realY] <= 0) yIndex--;
+
+        console.log(realY, ':', xIndex[realY]);
+    }
+}
+
+function populateBrute(x, y, bombs, mineField) {
+    for(let iy = y - 1;iy <= y + 1;iy++) {
+        for(let ix = x - 1;ix <= x + 1;ix++) {
+            if(testForInbounds(mineField, ix, iy)) {
+                mineField[iy][ix].pickedFirst = true;
+            }
+        }
+    }
+
+    let placed = 0;
+    while(placed < bombs) {
+        const randomY = Math.floor(Math.random() * mineField.length);
+        const randomX = Math.floor(Math.random() * mineField[0].length);
+
+        if(!mineField[randomY][randomX].isOcupied()) {
+            mineField[randomY][randomX].bomb = true;
+            placed++;
+        }
     }
 }
 
@@ -294,7 +356,6 @@ class Square {
     }
 
     isOcupied() {
-        console.log('fucker');
         return this.bomb || this.pickedFirst;
     }
 
