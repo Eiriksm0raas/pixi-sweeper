@@ -8,6 +8,10 @@ const SQUARE_HEIGHT = 50;
 // Mac chrome
 // open /Applications/Google\ Chrome.app/ --args --allow-file-access-from-files
 
+let resources = {
+    textures: null,
+};
+
 let displayRules = {
     squareWidth:    SQUARE_WIDTH,
     squareHeight:   SQUARE_HEIGHT,
@@ -37,9 +41,12 @@ let gameState = {
     time: {
         started: false,
         time: null,
+        digits: [],
+        container: null,
     },
     score: {
         digits: [],
+        container: null,
     }
 };
 
@@ -74,6 +81,7 @@ document.addEventListener('keydown', e => {
 const spriteLoader = PIXI.Loader.shared;
 spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) => {
     const textures = {};
+    resource.textures = textures;
 
     textures.openTile   = getTexturesByName('openTile', [...Array(9).keys()]);
     textures.score      = getTexturesByName('score', [...Array(10).keys()]);
@@ -106,14 +114,34 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
     updateScore(textures);
     topGroup.addChild(gameState.score.container);
 
+    // Time
+    gameState.time.digits = setupDigits(textures);
+    gameState.time.container = new PIXI.Container();
+    gameState.time.container.addChild(...gameState.time.digits);
+
     // Top group positions
-    gameState.smiley.sprite.x = gameState.score.container.width;
+    gameState.smiley.sprite.x = gameState.score.container.width + 100;
+    gameState.time.container.x = topGroup.width + 100;
+    topGroup.addChild(gameState.time.container);
+
+    topGroup.x = (window.innerWidth / 2) - (topGroup.width / 2);
+
     app.stage.addChild(topGroup);
 
     const mineField = generateEmptyMineField(gameRules.width, gameRules.height);
     fakeMineField(mineField, textures);
     centerContainer();
 });
+
+function updateTime(textures) {
+    if(gameState.time.started) {
+        const time = Math.floor((Date.now() - gameState.time.time) / 1000);
+        const display = getDisplayNumber(time);
+        gameState.time.digits[0].texture = textures.score[parseInt(display[0])];
+        gameState.time.digits[1].texture = textures.score[parseInt(display[1])];
+        gameState.time.digits[2].texture = textures.score[parseInt(display[2])];
+    }
+}
 
 function setupDigits(textures) {
     const digits = [];
@@ -146,6 +174,12 @@ function open(x, y, mineField, textures) {
         //populate2(x, y, gameRules.bombCount, mineField);
         populateBrute(x, y, gameRules.bombCount, mineField);
         numerizeMineField(mineField);
+
+        // Start the timer
+        gameState.time.time = Date.now();
+        gameState.time.started = true;
+        app.ticker.add(d => timeLoop(d, textures));
+
         open(x, y, mineField, textures);
     } else {
         mineField[y][x].open = true;
@@ -177,6 +211,7 @@ function win(mineField, textures) {
         }
     }
     gameState.smiley.sprite.texture = textures.smile[2];
+    gameState.time.started = false;
     // 4Head
     textures.smile[0] = textures.smile[1] = textures.smile[2];
 }
@@ -213,6 +248,7 @@ function lose(mineField, textures) {
             mineField[y][x].open = true;
         }
     }
+    gameState.time.started = false;
 }
 
 function getDisplayNumber(number) {
@@ -504,4 +540,8 @@ function getTexturesByName(prefix, variations) {
         result.push(PIXI.Texture.from(prefix + variation));
     }
     return result;
+}
+
+function timeLoop(delta, textures) {
+    updateTime(textures);
 }
