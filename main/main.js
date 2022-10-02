@@ -34,16 +34,30 @@ const app = new PIXI.Application({
     backgroundColor: 0x02395D,
 });
 document.body.appendChild(app.view);
-document.oncontextmenu = document.body.oncontextmenu = e => {
-    e.preventDefault();
+document.oncontextmenu = document.body.oncontextmenu = e => e.preventDefault();
+
+const gameContainer = new PIXI.Container();
+app.stage.addChild(gameContainer);
+
+function centerContainer() {
+    console.log('yyy');
+    gameContainer.x = (window.innerWidth / 2) - (gameContainer.width / 2);
+    gameContainer.y = 100;
 }
 
+document.addEventListener('keydown', e => {
+    if(e.key === 'ArrowUp') {
+        gameContainer.scale.x += 0.2;
+        gameContainer.scale.y += 0.2;
+    }
+    if(e.key === 'ArrowDown') {
+        gameContainer.scale.x -= 0.2;
+        gameContainer.scale.y -= 0.2;
+    }
+});
+
 const spriteLoader = PIXI.Loader.shared;
-
-const textures1 = {};
-
 spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) => {
-   
     const textures = {};
 
     textures.openTile   = getTexturesByName('openTile', [...Array(9).keys()]);
@@ -56,12 +70,7 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
 
     const mineField = generateEmptyMineField(30, 16);
     fakeMineField(mineField, textures);
-    /*
-    populateMineField(mineField, 500, 15, 8);
-    numerizeMineField(mineField);
-    displayMineField(mineField, textures);
-    */
-
+    centerContainer();
 });
 
 function openAroundZeros(x, y, mineField, textures) {
@@ -184,7 +193,7 @@ function fakeMineField(mineField, textures) {
                 tryToFlag(x, y, mineField, textures);
             });
 
-            app.stage.addChild(sprite);
+            gameContainer.addChild(sprite);
             square.setSprite(sprite);
         }
     }  
