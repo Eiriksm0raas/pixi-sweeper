@@ -131,6 +131,14 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
 
     const mineField = generateEmptyMineField(gameRules.width, gameRules.height);
     fakeMineField(mineField, textures);
+
+    while(gameContainer.width >= window.innerWidth
+        || gameContainer.height - 100 >= window.innerHeight    
+    ) {
+        gameContainer.scale.x -= 0.2;
+        gameContainer.scale.y -= 0.2;
+    }
+
     centerContainer();
 });
 
