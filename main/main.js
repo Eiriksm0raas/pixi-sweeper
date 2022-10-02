@@ -5,12 +5,10 @@ const SPRITE_TEXTURE = '';
 const SQUARE_WIDTH  = 50;
 const SQUARE_HEIGHT = 50;
 
+const MIN_SCALE     = 0.1;
+
 // Mac chrome
 // open /Applications/Google\ Chrome.app/ --args --allow-file-access-from-files
-
-let resources = {
-    textures: null,
-};
 
 let displayRules = {
     squareWidth:    SQUARE_WIDTH,
@@ -52,20 +50,51 @@ let gameState = {
 };
 
 const app = new PIXI.Application({
-    width:  window.innerWidth - BORDER,
-    height: window.innerHeight - BORDER,
-    backgroundColor: 0x02395D,
+    width:  window.innerWidth - 5,
+    height: window.innerHeight - 5,
+    backgroundColor: 0x000000,
 });
 document.body.appendChild(app.view);
 document.oncontextmenu = document.body.oncontextmenu = e => e.preventDefault();
 
 const gameContainer = new PIXI.Container();
+const topGroup      = new PIXI.Container();
+
 app.stage.addChild(gameContainer);
 
 function centerContainer() {
-    gameContainer.x = (window.innerWidth / 2) - (gameContainer.width / 2);
+    while((gameContainer.width < app.width / 2
+        || gameContainer.height < app.height / 2)
+        && gameContainer.width > 0
+        && gameContainer.height > 0
+    ) {
+        gameContainer.scale.x += 0.2;
+        gameContainer.scale.y += 0.2;
+    }
+
+    while(gameContainer.width >= app.width || gameContainer.height >= app.height) {
+        gameContainer.scale.x -= 0.2;
+        gameContainer.scale.y -= 0.2;
+    }
+
+    if(gameContainer.scale.x <= MIN_SCALE) {
+        gameContainer.scale.x = MIN_SCALE;
+        gameContainer.scale.y = MIN_SCALE;
+    }
+    
+    gameContainer.x = app.width / 2 - gameContainer.width / 2;
     gameContainer.y = 100;
+    topGroup.x = app.width / 2 - topGroup.width / 2;
 }
+
+function resizeEvent() {
+    console.log('changed');
+    app.width =     window.innerWidth - 5;
+    app.height =    window.innerHeight - 5;
+    centerContainer();
+}
+window.addEventListener('resize', () => resizeEvent());
+resizeEvent();
 
 document.addEventListener('keydown', e => {
     if(e.key === 'ArrowUp') {
@@ -76,6 +105,11 @@ document.addEventListener('keydown', e => {
     if(e.key === 'ArrowDown') {
         gameContainer.scale.x -= 0.2;
         gameContainer.scale.y -= 0.2;
+        
+        if(gameContainer.scale.x <= MIN_SCALE) {
+            gameContainer.scale.x = MIN_SCALE;
+            gameContainer.scale.y = MIN_SCALE;
+        }
         centerContainer();
     }
     if(e.key === 'Control') {
@@ -93,7 +127,6 @@ document.addEventListener('keyup', e => {
 const spriteLoader = PIXI.Loader.shared;
 spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) => {
     const textures = {};
-    resource.textures = textures;
 
     textures.openTile   = getTexturesByName('openTile', [...Array(9).keys()]);
     textures.score      = getTexturesByName('score', [...Array(10).keys()]);
@@ -102,8 +135,6 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
 
     textures.closedTile = PIXI.Texture.from('closedTile');
     textures.flag       = PIXI.Texture.from('flag');
-
-    const topGroup = new PIXI.Container();
 
     // Smiley
     gameState.smiley.sprite = new PIXI.Sprite(textures.smile[0]);
@@ -136,20 +167,24 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
     gameState.time.container.x = topGroup.width + 100;
     topGroup.addChild(gameState.time.container);
 
-    topGroup.x = (window.innerWidth / 2) - (topGroup.width / 2);
+    topGroup.x = (app.width / 2) - (topGroup.width / 2);
 
     app.stage.addChild(topGroup);
 
     const mineField = generateEmptyMineField(gameRules.width, gameRules.height);
     fakeMineField(mineField, textures);
 
-    while(gameContainer.width >= window.innerWidth
-        || gameContainer.height - 100 >= window.innerHeight    
+    while(gameContainer.width >= app.width
+        || gameContainer.height - 100 >= app.height    
     ) {
         gameContainer.scale.x -= 0.2;
         gameContainer.scale.y -= 0.2;
     }
 
+    if(gameContainer.scale.x <= 0) {
+        gameContainer.scale.x = MIN_SCALE;
+        gameContainer.scale.y = MIN_SCALE;
+    }
     centerContainer();
 });
 
@@ -190,8 +225,6 @@ function openAroundZeros(x, y, mineField, textures) {
 function open(x, y, mineField, textures) {
     if(!gameState.firstOpened) {
         gameState.firstOpened = true;
-        //populateMineField(mineField, gameRules.bombCount, x, y);
-        //populate2(x, y, gameRules.bombCount, mineField);
         populateBrute(x, y, gameRules.bombCount, mineField);
         numerizeMineField(mineField);
 
@@ -199,8 +232,6 @@ function open(x, y, mineField, textures) {
         gameState.time.time = Date.now();
         gameState.time.started = true;
         app.ticker.add(d => timeLoop(d, textures));
-
-        testFail(mineField);
 
         open(x, y, mineField, textures);
     } else {
@@ -235,29 +266,7 @@ function win(mineField, textures) {
     }
     gameState.smiley.sprite.texture = textures.smile[2];
     gameState.time.started = false;
-    // 4Head
     textures.smile[0] = textures.smile[1] = textures.smile[2];
-}
-
-function testFail(mineField) {
-    let count = 0;
-    for(let y = 0;y < mineField.length;y++) {
-        for(let x = 0;x < mineField[0].length;x++) {
-            const square = mineField[y][x];
-
-            if(square.bomb) count++;
-            /*
-            if(square.pickedFirst && !square.isOcupied()) {
-                console.log(square.x, square.y, 'fuck me');
-            }
-
-            if(square.bomb && square.pickedFirst) {
-                console.log(square.x, square.y);
-                if(!square.isOcupied()) console.log('???');
-            }   */
-        }
-    }
-    console.log('bombs: ', count);
 }
 
 function lose(mineField, textures) {
@@ -385,48 +394,7 @@ function setTileTexture(x, y, mineField, textures) {
     }
 }
 
-function populate2(x, y, bombs, mineField) {
-    // Setting up the indexes
-    let yIndex      = mineField.length;
-    const xIndex    = [];
-    for(let iy = 0;iy < mineField.length;iy++) {
-        xIndex[iy] = mineField[0].length;
-
-        if(iy >= y - 1 && iy <= y + 1) {
-            for(let ix = x - 1;ix < x + 1;ix++) {
-                if(testForInbounds(mineField, ix, iy)) {
-                    xIndex[iy]--;
-                    mineField[iy][ix].pickedFirst = true;
-                }
-            }
-        }
-        if(xIndex[iy] <= 0) yIndex--;
-    }
-
-    // Put in the bombs
-    for(let placed = 0;placed < bombs;placed++) {
-        const randomY = Math.floor(Math.random() * yIndex);
-        let realY = 0;
-        for(let iy = 0;iy < randomY;) {
-            if(xIndex[realY] > 0) iy++;
-            realY++;
-        }
-
-        const randomX = Math.floor(Math.random() * xIndex[realY]);
-        let realX = 0;
-        for(let ix = 0;ix < randomX;) {
-            if(!mineField[realY][realX].isOcupied()) ix++;
-            realX++;
-        }
-
-        mineField[realY][realX].bomb = true;
-        xIndex[realY]--;
-        if(xIndex[realY] <= 0) yIndex--;
-
-        console.log(realY, ':', xIndex[realY]);
-    }
-}
-
+// TODO: change this with a solution that scales
 function populateBrute(x, y, bombs, mineField) {
     for(let iy = y - 1;iy <= y + 1;iy++) {
         for(let ix = x - 1;ix <= x + 1;ix++) {
@@ -445,52 +413,6 @@ function populateBrute(x, y, bombs, mineField) {
             mineField[randomY][randomX].bomb = true;
             placed++;
         }
-    }
-}
-
-// Populate the minefield, making sure x, y is an empty square
-function populateMineField(mineField, bombs, x, y) {
-    let yIndex = 0;
-    const xIndex = [];
-
-    for(let iy = 0;iy < mineField.length;iy++) {
-        xIndex[iy] = mineField[0].length;
-
-        if(iy === y - 1 || iy === y || iy === y + 1) {
-            for(let ix = x - 1;ix <= x + 1;ix++) {
-                if(testForInbounds(mineField, ix, iy)) {
-                    mineField[iy][ix].pickedFirst = true;
-                    xIndex[iy]--;
-                }
-            }
-        }
-        
-        if(xIndex[iy] > 0) yIndex++;
-    }
-
-    for(let count = 0;count < bombs;count++) {
-        const randY = Math.floor(Math.random() * yIndex);
-        let bombY = 0;
-        for(let iy = 0;iy < randY;bombY++) {
-            if(xIndex[bombY] > 0) iy++;
-        }
-
-        const randX = Math.floor(Math.random() * xIndex[bombY]);
-        
-        let bombX = 0;
-        for(let ix = 0;ix < randX;bombX++) {
-            //if(!mineField[bombY][bombX].isOcupied()) ix++;
-            console.log(bombY, bombX);
-            if(!mineField[bombY][bombX].bomb && !mineField[bombY][bombX].pickedFirst) {
-                ix++;
-            } else {
-                
-            }
-        }
-
-        mineField[bombY][bombX].bomb = true;
-        xIndex[bombY]--;
-        if(xIndex[bombY] <= 0) yIndex--;
     }
 }
 
