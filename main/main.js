@@ -26,6 +26,9 @@ let gameState = {
         x: 0,
         y: 0,
     },
+    smiley: {
+        sprite: null,
+    }
 };
 
 const app = new PIXI.Application({
@@ -40,7 +43,6 @@ const gameContainer = new PIXI.Container();
 app.stage.addChild(gameContainer);
 
 function centerContainer() {
-    console.log('yyy');
     gameContainer.x = (window.innerWidth / 2) - (gameContainer.width / 2);
     gameContainer.y = 100;
 }
@@ -56,6 +58,7 @@ document.addEventListener('keydown', e => {
     }
 });
 
+
 const spriteLoader = PIXI.Loader.shared;
 spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) => {
     const textures = {};
@@ -67,6 +70,12 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
 
     textures.closedTile = PIXI.Texture.from('closedTile');
     textures.flag       = PIXI.Texture.from('flag');
+
+    gameState.smiley.sprite = new PIXI.Sprite(textures.smile[0]);
+    app.stage.addChild(gameState.smiley.sprite);
+    gameState.smiley.sprite.width   = 100;
+    gameState.smiley.sprite.height  = 100;
+    gameState.smiley.sprite.x = (window.innerWidth / 2) - 50;
 
     const mineField = generateEmptyMineField(30, 16);
     fakeMineField(mineField, textures);
@@ -142,6 +151,7 @@ function clickedOnTile(x, y, mineField, textures) {
 
     if(!mineField[y][x].open && !mineField[y][x].flag) {
         mineField[y][x].setTexture(textures.openTile[0]);
+        gameState.smiley.sprite.texture = textures.smile[1];
     }
 }
 
@@ -153,6 +163,7 @@ function tryToOpen(x, y, mineField, textures) {
     } else {
         setTileTexture(gameState.triedToOpen.x, gameState.triedToOpen.y, mineField, textures);
     }
+    gameState.smiley.sprite.texture = textures.smile[0];
 }
 
 function tryToFlag(x, y, mineField, textures) {
