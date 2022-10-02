@@ -47,7 +47,8 @@ let gameState = {
     score: {
         digits: [],
         container: null,
-    }
+    },
+    ctrl: false,
 };
 
 const app = new PIXI.Application({
@@ -70,12 +71,22 @@ document.addEventListener('keydown', e => {
     if(e.key === 'ArrowUp') {
         gameContainer.scale.x += 0.2;
         gameContainer.scale.y += 0.2;
+        centerContainer();
     }
     if(e.key === 'ArrowDown') {
         gameContainer.scale.x -= 0.2;
         gameContainer.scale.y -= 0.2;
+        centerContainer();
     }
-    centerContainer();
+    if(e.key === 'Control') {
+        gameState.ctrl = true;
+    }
+});
+
+document.addEventListener('keyup', e => {
+    if(e.key === 'Control') {
+        gameState.ctrl = false;
+    }
 });
 
 
@@ -327,12 +338,21 @@ function fakeMineField(mineField, textures) {
             sprite.interactive  = true;
             sprite.buttonMode   = true;
 
-            sprite.on('mousedown', () => {
-                clickedOnTile(x, y, mineField, textures);
+            sprite.on('mousedown', (e) => {
+                if(gameState.ctrl) {
+                    gameState.triedToFlag.x = x;
+                    gameState.triedToFlag.y = y;   
+                } else {
+                    clickedOnTile(x, y, mineField, textures);
+                }
             });
 
             sprite.on('mouseup', () => {
-                tryToOpen(x, y, mineField, textures);
+                if(gameState.ctrl) {
+                    tryToFlag(x, y, mineField, textures);
+                } else {
+                    tryToOpen(x, y, mineField, textures);
+                }
             });
 
             sprite.on('rightdown', () => {
