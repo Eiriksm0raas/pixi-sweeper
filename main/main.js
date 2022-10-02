@@ -200,14 +200,17 @@ function open(x, y, mineField, textures) {
         gameState.time.started = true;
         app.ticker.add(d => timeLoop(d, textures));
 
+        testFail(mineField);
+
         open(x, y, mineField, textures);
     } else {
+        if(mineField[y][x].open) return;
+
         mineField[y][x].open = true;
         setTileTexture(x, y, mineField, textures);
         if(mineField[y][x].bomb) {
             lose(mineField, textures);
         } else {
-
             gameState.opened++;
             if(gameState.opened + gameRules.bombCount === gameRules.width * gameRules.height) {
                 win(mineField, textures);
