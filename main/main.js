@@ -1,27 +1,26 @@
-
-const BORDER = 10;
-const SPRITE_TEXTURE = '';
-
 const SQUARE_WIDTH  = 50;
 const SQUARE_HEIGHT = 50;
-
 const MIN_SCALE     = 0.1;
 
-// Mac chrome
+const BOMB_COUNT    = 99;
+const FIELD_WIDTH   = 30;
+const FIELD_HEIGHT  = 16;
+
+// Open in chrone for mac with rights
 // open /Applications/Google\ Chrome.app/ --args --allow-file-access-from-files
 
-let displayRules = {
+const displayRules = {
     squareWidth:    SQUARE_WIDTH,
     squareHeight:   SQUARE_HEIGHT,
 };
 
-let gameRules = {
-    bombCount: 99,
-    width: 30,
-    height: 16,
+const gameRules = {
+    bombCount:  BOMB_COUNT,
+    width:      FIELD_WIDTH,
+    height:     FIELD_HEIGHT,
 }
 
-let gameState = {
+const gameState = {
     firstOpened: false,
     triedToOpen: {
         x: 0,
@@ -168,33 +167,19 @@ spriteLoader.add('tileset', '../images/sprites.json').load((loader, resource) =>
     topGroup.addChild(gameState.time.container);
 
     topGroup.x = (app.width / 2) - (topGroup.width / 2);
-
     app.stage.addChild(topGroup);
 
     const mineField = generateEmptyMineField(gameRules.width, gameRules.height);
     fakeMineField(mineField, textures);
-
-    while(gameContainer.width >= app.width
-        || gameContainer.height - 100 >= app.height    
-    ) {
-        gameContainer.scale.x -= 0.2;
-        gameContainer.scale.y -= 0.2;
-    }
-
-    if(gameContainer.scale.x <= 0) {
-        gameContainer.scale.x = MIN_SCALE;
-        gameContainer.scale.y = MIN_SCALE;
-    }
     centerContainer();
 });
 
 function updateTime(textures) {
     if(gameState.time.started) {
-        const time = Math.floor((Date.now() - gameState.time.time) / 1000);
-        const display = getDisplayNumber(time);
-        gameState.time.digits[0].texture = textures.score[parseInt(display[0])];
-        gameState.time.digits[1].texture = textures.score[parseInt(display[1])];
-        gameState.time.digits[2].texture = textures.score[parseInt(display[2])];
+        const display = getDisplayNumber(Math.floor((Date.now() - gameState.time.time) / 1000));
+        for(let i = 0;i < 3;i++) {
+            gameState.time.digits[i].texture = textures.score[parseInt(display[i])];
+        }
     }
 }
 
@@ -297,9 +282,9 @@ function getDisplayNumber(number) {
 
 function updateScore(textures) {
     const display = getDisplayNumber(gameRules.bombCount - gameState.flagged);
-    gameState.score.digits[0].texture = textures.score[parseInt(display[0])];
-    gameState.score.digits[1].texture = textures.score[parseInt(display[1])];
-    gameState.score.digits[2].texture = textures.score[parseInt(display[2])];
+    for(let i = 0;i < 3;i++) {
+        gameState.score.digits[i].texture = textures.score[parseInt(display[i])];
+    }
 }
 
 function addToScore(textures, positive = true) {
@@ -420,21 +405,10 @@ function numerizeMineField(mineField) {
     for(let y = 0;y < mineField.length;y++) {
         for(let x = 0;x < mineField[0].length;x++) {
             if(mineField[y][x].bomb) {
-                // Above
-                if(y - 1 >= 0) {
-                    if(testForInbounds(mineField, x - 1, y - 1)) mineField[y - 1][x - 1].number++;
-                    mineField[y - 1][x].number++;
-                    if(testForInbounds(mineField, x + 1, y - 1)) mineField[y - 1][x + 1].number++;
-                }
-                // Same row
-                if(testForInbounds(mineField, x - 1, y)) mineField[y][x - 1].number++;
-                if(testForInbounds(mineField, x + 1, y)) mineField[y][x + 1].number++;
-
-                // Below
-                if(y + 1 < mineField.length) {
-                    if(testForInbounds(mineField, x - 1, y + 1)) mineField[y + 1][x - 1].number++;
-                    mineField[y + 1][x].number++;
-                    if(testForInbounds(mineField, x + 1, y + 1)) mineField[y + 1][x + 1].number++;
+                for(let iy = y - 1;iy <= y + 1;iy++) {
+                    for(let ix = x - 1;ix <= x + 1;ix++) {
+                        if(testForInbounds(mineField, ix, iy)) mineField[iy][ix].number++;
+                    }
                 }
             }
         }
