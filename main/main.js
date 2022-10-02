@@ -75,6 +75,7 @@ document.addEventListener('keydown', e => {
         gameContainer.scale.x -= 0.2;
         gameContainer.scale.y -= 0.2;
     }
+    centerContainer();
 });
 
 
