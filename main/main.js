@@ -85,7 +85,9 @@ function open(x, y, mineField, textures) {
     } else {
         mineField[y][x].open = true;
         setTileTexture(x, y, mineField, textures);
-        if(mineField[y][x].number == 0) {
+        if(mineField[y][x].bomb) {
+            lose(mineField, textures);
+        } else if(mineField[y][x].number == 0) {
             openAroundZeros(x, y, mineField, textures);
         }
     }
@@ -110,6 +112,19 @@ function testFail(mineField) {
         }
     }
     console.log('bombs: ', count);
+}
+
+function lose(mineField, textures) {
+    for(let y = 0;y < mineField.length;y++) {
+        for(let x = 0;x < mineField[0].length;x++) {
+            if(!mineField[y][x].bomb && mineField[y][x].flag) {
+                mineField[y][x].setTexture(textures.openBomb[2]);
+            } else if(mineField[y][x].bomb && !mineField[y][x].flag && !mineField[y][x].open) {
+                mineField[y][x].setTexture(textures.openBomb[0]);
+            }
+            mineField[y][x].open = true;
+        }
+    }
 }
 
 function clickedOnTile(x, y, mineField, textures) {
