@@ -210,7 +210,7 @@ function openAroundZeros(x, y, mineField, textures) {
 function open(x, y, mineField, textures) {
     if(!gameState.firstOpened) {
         gameState.firstOpened = true;
-        populateBrute(x, y, gameRules.bombCount, mineField);
+        populate2(x, y, gameRules.bombCount, mineField);
         numerizeMineField(mineField);
 
         // Start the timer
@@ -379,8 +379,7 @@ function setTileTexture(x, y, mineField, textures) {
     }
 }
 
-// TODO: change this with a solution that scales
-function populateBrute(x, y, bombs, mineField) {
+function populate2(x, y, bombs, mineField) {
     for(let iy = y - 1;iy <= y + 1;iy++) {
         for(let ix = x - 1;ix <= x + 1;ix++) {
             if(testForInbounds(mineField, ix, iy)) {
@@ -391,13 +390,26 @@ function populateBrute(x, y, bombs, mineField) {
 
     let placed = 0;
     while(placed < bombs) {
-        const randomY = Math.floor(Math.random() * mineField.length);
-        const randomX = Math.floor(Math.random() * mineField[0].length);
-
-        if(!mineField[randomY][randomX].isOcupied()) {
-            mineField[randomY][randomX].bomb = true;
-            placed++;
+        // Pick random y
+        const possibleY = [];
+        for(let iy = 0;iy < mineField.length;iy++) {
+            let count = 0;
+            for(let ix = 0;ix < mineField[iy].length;ix++) {
+                if(!mineField[iy][ix].isOcupied()) count++;
+            }
+            if(count > 0) possibleY.push(iy);
         }
+        const randomY = possibleY[Math.floor(Math.random() * possibleY.length)];
+
+        // Pick random x
+        const possibleX = [];
+        for(let i = 0;i < mineField[0].length;i++) {
+            if(!mineField[randomY][i].isOcupied()) possibleX.push(i);
+        }
+        const randomX = possibleX[Math.floor(Math.random() * possibleX.length)];
+
+        mineField[randomY][randomX].bomb = true;
+        placed++;
     }
 }
 
